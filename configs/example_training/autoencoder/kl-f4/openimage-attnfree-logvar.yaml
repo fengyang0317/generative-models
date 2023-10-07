@@ -1,11 +1,12 @@
 model:
   base_learning_rate: 4.5e-6
-  target: sgm.models.autoencoder.AutoencodingEngine
+  target: sgm.models.autoencoder.AutoencoderKL
   params:
+    embed_dim: 4
     input_key: image
     monitor: val/rec_loss
 
-    loss_config:
+    lossconfig:
       target: sgm.modules.autoencoding.losses.GeneralLPIPSWithDiscriminator
       params:
         perceptual_weight: 0.25
@@ -19,35 +20,18 @@ model:
     regularizer_config:
       target: sgm.modules.autoencoding.regularizers.DiagonalGaussianRegularizer
 
-    encoder_config:
-      target: sgm.modules.diffusionmodules.model.Encoder
-      params:
-        attn_type: none
-        double_z: True
-        z_channels: 4
-        resolution: 256
-        in_channels: 3
-        out_ch: 3
-        ch: 128
-        ch_mult: [ 1, 2, 4 ]
-        num_res_blocks: 4
-        attn_resolutions: [ ]
-        dropout: 0.0
-
-    decoder_config:
-      target: sgm.modules.diffusionmodules.model.Decoder
-      params:
-        attn_type: none
-        double_z: False
-        z_channels: 4
-        resolution: 256
-        in_channels: 3
-        out_ch: 3
-        ch: 128
-        ch_mult: [ 1, 2, 4 ]
-        num_res_blocks: 4
-        attn_resolutions: [ ]
-        dropout: 0.0
+    ddconfig:
+      attn_type: vanilla-xformers
+      double_z: true
+      z_channels: 4
+      resolution: 256
+      in_channels: 3
+      out_ch: 3
+      ch: 128
+      ch_mult: [ 1, 2, 4, 4 ]
+      num_res_blocks: 2
+      attn_resolutions: [ ]
+      dropout: 0.0
 
 data:
   target: sgm.data.hugging_dataset.StableDataModuleFromConfig
@@ -57,7 +41,7 @@ data:
         dataset_path: "/home/yangfeng/datasets/open_images_v7/train"
       buffer_size: 10000
       loader:
-        batch_size: 7
+        batch_size: 8
         num_workers: 4
         shuffle: True
 
@@ -66,7 +50,7 @@ data:
         dataset_path: "/home/yangfeng/datasets/open_images_v7/validation"
 
       loader:
-        batch_size: 7
+        batch_size: 8
         num_workers: 4
 
 

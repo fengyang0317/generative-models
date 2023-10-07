@@ -284,10 +284,11 @@ class AutoencoderKL(AutoencodingEngine):
         ddconfig = kwargs.pop("ddconfig")
         ckpt_path = kwargs.pop("ckpt_path", None)
         ignore_keys = kwargs.pop("ignore_keys", ())
+        regularizer_config = kwargs.pop("regularizer_config", {"target": "torch.nn.Identity"})
         super().__init__(
             encoder_config={"target": "torch.nn.Identity"},
             decoder_config={"target": "torch.nn.Identity"},
-            regularizer_config={"target": "torch.nn.Identity"},
+            regularizer_config=regularizer_config,
             loss_config=kwargs.pop("lossconfig"),
             **kwargs,
         )
@@ -301,12 +302,12 @@ class AutoencoderKL(AutoencodingEngine):
         if ckpt_path is not None:
             self.init_from_ckpt(ckpt_path, ignore_keys=ignore_keys)
 
-    def encode(self, x):
-        assert (
-            not self.training
-        ), f"{self.__class__.__name__} only supports inference currently"
+    def encode(self, x, return_reg_log: bool = False):
         h = self.encoder(x)
         moments = self.quant_conv(h)
+        if return_reg_log:
+            z, reg_log = self.regularization(moments)
+            return z, reg_log
         posterior = DiagonalGaussianDistribution(moments)
         return posterior
 
@@ -314,6 +315,15 @@ class AutoencoderKL(AutoencodingEngine):
         z = self.post_quant_conv(z)
         dec = self.decoder(z, **decoder_kwargs)
         return dec
+
+    # def forward(self, input, sample_posterior=True):
+    #     posterior = self.encode(input)
+    #     if sample_posterior:
+    #         z = posterior.sample()
+    #     else:
+    #         z = posterior.mode()
+    #     dec = self.decode(z)
+    #     return dec, posterior
 
 
 class AutoencoderKLInferenceWrapper(AutoencoderKL):
